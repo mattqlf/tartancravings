@@ -26,39 +26,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user's profile with Stripe account
+    // Get user's profile with PayPal email
     const { data: profile } = await supabase
       .from('profiles')
-      .select('stripe_account_id, display_name, stripe_onboarding_complete')
+      .select('paypal_email, display_name, paypal_verified')
       .eq('id', user.id)
       .single();
 
-    if (!profile?.stripe_account_id) {
+    if (!profile?.paypal_email) {
       return NextResponse.json(
-        { error: 'No Stripe account connected. Please complete onboarding first.' },
+        { error: 'No PayPal email configured. Please add your PayPal/Venmo email first.' },
         { status: 400 }
       );
     }
 
-    if (!profile.stripe_onboarding_complete) {
-      // Check if onboarding is actually complete in Stripe
-      const account = await stripe.accounts.retrieve(profile.stripe_account_id);
-
-      if (account.charges_enabled && account.payouts_enabled) {
-        // Update the database
-        await supabase
-          .from('profiles')
-          .update({ stripe_onboarding_complete: true })
-          .eq('id', user.id);
-      } else {
-        return NextResponse.json(
-          { error: 'Stripe onboarding not complete. Please complete onboarding first.' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Create Stripe Payment Link
+    // Create Stripe Payment Link (no transfer_data since we'll use PayPal payouts)
     const paymentLink = await stripe.paymentLinks.create({
       line_items: [{
         price_data: {
@@ -71,12 +53,10 @@ export async function POST(request: NextRequest) {
         },
         quantity: 1,
       }],
-      transfer_data: {
-        destination: profile.stripe_account_id,
-      },
       metadata: {
         recipient_id: user.id,
         recipient_email: user.email || '',
+        paypal_email: profile.paypal_email,
       },
     });
 

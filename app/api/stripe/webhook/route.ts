@@ -39,52 +39,32 @@ export async function POST(request: NextRequest) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
 
-        console.log('Checkout session completed:', {
-          sessionId: session.id,
-          paymentLink: session.payment_link,
-          metadata: session.metadata,
-          paymentStatus: session.payment_status,
-          customerEmail: session.customer_details?.email,
-          url: session.url,
-        });
-
         // Find the payment request by payment link ID
         const { data: paymentRequest, error: findError } = await supabase
           .from('payment_requests')
-          .select('id, recipient_id')
+          .select('id, recipient_id, amount, payout_amount, description')
           .eq('stripe_payment_link_id', session.payment_link)
           .single();
 
-        if (findError || !paymentRequest) {
-          console.error('Payment request not found for session:', session.id, 'payment_link:', session.payment_link);
-          console.error('Database error:', findError);
+        let finalPaymentRequest = paymentRequest;
 
+        if (findError || !paymentRequest) {
           // Try to find by URL if payment_link ID doesn't work
           if (session.url) {
             const { data: fallbackRequest } = await supabase
               .from('payment_requests')
-              .select('id, recipient_id')
+              .select('id, recipient_id, amount, payout_amount, description')
               .eq('payment_link_url', session.url)
               .single();
 
             if (fallbackRequest) {
-              console.log('Found payment request by URL fallback');
-              const { error: updateError } = await supabase
-                .from('payment_requests')
-                .update({
-                  status: 'paid',
-                  stripe_session_id: session.id,
-                  paid_by_email: session.customer_details?.email || null,
-                  paid_at: new Date().toISOString(),
-                })
-                .eq('id', fallbackRequest.id);
-
-              if (!updateError) {
-                console.log('Payment completed (via URL fallback) for request:', fallbackRequest.id);
-              }
+              finalPaymentRequest = fallbackRequest;
+            } else {
+              break;
             }
+          } else {
+            break;
           }
-          break;
         }
 
         // Update payment request status
@@ -96,15 +76,113 @@ export async function POST(request: NextRequest) {
             paid_by_email: session.customer_details?.email || null,
             paid_at: new Date().toISOString(),
           })
-          .eq('id', paymentRequest.id);
+          .eq('id', finalPaymentRequest.id);
 
         if (updateError) {
-          console.error('Error updating payment request:', updateError);
+          return new Response(`Database update error: ${updateError.message}`, { status: 500 });
         } else {
-          console.log('✅ Successfully updated payment request to paid');
+
+          // Trigger PayPal payout
+          try {
+            // Import and call payout function directly
+            const { createPayout } = await import('@/lib/paypal');
+
+            // Get recipient's PayPal email
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('paypal_email, display_name')
+              .eq('id', finalPaymentRequest.recipient_id)
+              .single();
+
+            if (!profile?.paypal_email) {
+              return;
+            }
+
+            // Import platform configuration
+            const { calculatePlatformFee, getPlatformConfig } = await import('@/lib/platform-config');
+
+            // Calculate platform fee and recipient payout
+            const totalAmount = finalPaymentRequest.amount;
+            const { platformFeeCents, payoutAmountCents } = calculatePlatformFee(totalAmount);
+            const platformConfig = getPlatformConfig();
+
+            if (payoutAmountCents <= 0) {
+              return;
+            }
+
+            // Update payment request with fee calculation and processing status
+            await supabase
+              .from('payment_requests')
+              .update({
+                payout_status: 'processing',
+                platform_fee: platformFeeCents,
+                payout_amount: payoutAmountCents
+              })
+              .eq('id', finalPaymentRequest.id);
+
+            // Create PayPal payout to recipient
+            const recipientPayoutResult = await createPayout({
+              recipientEmail: profile.paypal_email,
+              amount: payoutAmountCents,
+              note: `Payment for: ${finalPaymentRequest.description || 'QR Code Payment'}`,
+            });
+
+            // Create PayPal payout to platform (if fee > 0)
+            let platformPayoutResult = null;
+            if (platformFeeCents > 0) {
+              platformPayoutResult = await createPayout({
+                recipientEmail: platformConfig.hostEmail,
+                amount: platformFeeCents,
+                note: `Platform fee (20%) for: ${finalPaymentRequest.description || 'QR Code Payment'}`,
+              });
+            }
+
+            // Check if both payouts succeeded (or only recipient if no platform fee)
+            const recipientSuccess = recipientPayoutResult.success;
+            const platformSuccess = platformFeeCents > 0 ? (platformPayoutResult?.success || false) : true;
+
+            if (recipientSuccess && platformSuccess) {
+              // Both payouts succeeded
+              await supabase
+                .from('payment_requests')
+                .update({
+                  payout_status: 'completed',
+                  payout_id: recipientPayoutResult.payoutBatchId,
+                  payout_completed_at: new Date().toISOString(),
+                })
+                .eq('id', finalPaymentRequest.id);
+            } else {
+              // One or both payouts failed
+              let errorMessage = '';
+              if (!recipientSuccess) {
+                errorMessage += `Recipient payout failed: ${recipientPayoutResult.error}`;
+              }
+              if (platformFeeCents > 0 && !platformSuccess) {
+                if (errorMessage) errorMessage += ' | ';
+                errorMessage += `Platform payout failed: ${platformPayoutResult?.error}`;
+              }
+
+              await supabase
+                .from('payment_requests')
+                .update({
+                  payout_status: 'failed',
+                  payout_error: errorMessage,
+                })
+                .eq('id', finalPaymentRequest.id);
+            }
+          } catch (payoutError) {
+
+            // Update payout status to failed
+            await supabase
+              .from('payment_requests')
+              .update({
+                payout_status: 'failed',
+                payout_error: payoutError instanceof Error ? payoutError.message : 'Unknown error',
+              })
+              .eq('id', finalPaymentRequest.id);
+          }
         }
 
-        console.log('Payment completed for request:', paymentRequest.id);
         break;
       }
 

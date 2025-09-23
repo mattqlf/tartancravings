@@ -77,7 +77,7 @@ export default async function DashboardPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 dark:text-white">Settings</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Stripe Connect</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">PayPal/Venmo</p>
                   </div>
                 </div>
               </CardContent>
