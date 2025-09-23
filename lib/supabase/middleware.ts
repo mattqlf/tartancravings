@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
+import { isCMUEmail } from "../auth/cmu-validator";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -47,15 +48,29 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
+  // Check if user has a CMU email if they're authenticated
+  if (user && user.email && !isCMUEmail(user.email)) {
+    // User is authenticated but not from CMU, sign them out and redirect
+    await supabase.auth.signOut();
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/unauthorized";
+    return NextResponse.redirect(url);
+  }
+
+  // Define protected routes that require authentication
+  const protectedRoutes = ['/restaurants', '/cart', '/orders', '/profile', '/protected'];
+  const isProtectedRoute = protectedRoutes.some(route =>
+    request.nextUrl.pathname.startsWith(route)
+  );
+
   if (
-    request.nextUrl.pathname !== "/" &&
+    isProtectedRoute &&
     !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
     !request.nextUrl.pathname.startsWith("/auth")
   ) {
-    // no user, potentially respond by redirecting the user to the login page
+    // no user on protected route, redirect to sign in
     const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
+    url.pathname = "/auth/signin";
     return NextResponse.redirect(url);
   }
 
