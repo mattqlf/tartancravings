@@ -2,6 +2,11 @@ import { updateSession } from "@/lib/supabase/middleware";
 import { type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // Skip auth for Stripe webhooks - they have their own signature verification
+  if (request.nextUrl.pathname.startsWith('/api/stripe/webhook')) {
+    return;
+  }
+
   return await updateSession(request);
 }
 
