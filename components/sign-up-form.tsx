@@ -40,15 +40,24 @@ export function SignUpForm({
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
-        },
       });
-      if (error) throw error;
-      router.push("/auth/sign-up-success");
+
+      if (error) {
+        if (error.message.includes('User already registered')) {
+          setError('An account already exists with this email address');
+        } else {
+          setError(error.message);
+        }
+        return;
+      }
+
+      // If user exists but hasn't confirmed email, Supabase returns the user without error
+      if (data.user && !data.session) {
+        router.push("/auth/sign-up-success");
+      }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
@@ -60,7 +69,7 @@ export function SignUpForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold">Create account</h1>
-        <p className="text-muted-foreground mt-2">Start accepting payments with PayQR</p>
+        <p className="text-muted-foreground mt-2">Join our delivery platform</p>
       </div>
       <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
         <CardContent className="p-8">

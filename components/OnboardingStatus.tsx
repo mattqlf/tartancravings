@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PayPalEmailForm } from '@/components/PayPalEmailForm';
+import { ContactForm } from '@/components/ContactForm';
 import { createClient } from '@/lib/supabase/client';
 
 export function OnboardingStatus() {
   const [loading, setLoading] = useState(true);
-  const [paypalEmail, setPaypalEmail] = useState<string | null>(null);
-  const [paypalVerified, setPaypalVerified] = useState(false);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -21,13 +21,13 @@ export function OnboardingStatus() {
       if (user) {
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('paypal_email, paypal_verified')
+          .select('display_name, phone_number')
           .eq('id', user.id)
           .single();
 
         if (profile) {
-          setPaypalEmail(profile.paypal_email);
-          setPaypalVerified(profile.paypal_verified || false);
+          setDisplayName(profile.display_name);
+          setPhoneNumber(profile.phone_number);
         }
       }
     } catch (error) {
@@ -37,8 +37,8 @@ export function OnboardingStatus() {
     }
   };
 
-  const handleEmailSaved = () => {
-    // Reload profile after email is saved
+  const handleContactSaved = () => {
+    // Reload profile after contact info is saved
     loadProfile();
   };
 
@@ -52,10 +52,10 @@ export function OnboardingStatus() {
   }
 
   return (
-    <PayPalEmailForm
-      currentEmail={paypalEmail}
-      isVerified={paypalVerified}
-      onEmailSaved={handleEmailSaved}
+    <ContactForm
+      currentDisplayName={displayName}
+      currentPhone={phoneNumber}
+      onContactSaved={handleContactSaved}
     />
   );
 }

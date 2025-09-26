@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Supabase Real-time Test</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Supabase Real-time Test</h1>
+    <div id="status">Connecting...</div>
+    <div id="updates"></div>
+
+    <script>
+        // You'll need to replace these with your actual Supabase credentials
+        const supabaseUrl = 'YOUR_SUPABASE_URL'
+        const supabaseKey = 'YOUR_SUPABASE_ANON_KEY'
+
+        // For testing, we'll use placeholder values - replace with real ones
+        console.log('Testing real-time subscriptions...');
+        console.log('This is a test file to check if Supabase real-time is working');
+        console.log('Open browser console to see if you get any real-time updates');
+
+        // Basic test without actual connection
+        document.getElementById('status').textContent = 'Test file created - check console for logs';
+
+        // Instructions for manual testing
+        const instructions = document.createElement('div');
+        instructions.innerHTML = `
+            <h2>Instructions:</h2>
+            <ol>
+                <li>Open two browser tabs with your app</li>
+                <li>Log in as different users</li>
+                <li>Open browser console (F12)</li>
+                <li>Look for subscription status messages</li>
+                <li>Create a delivery request in one tab</li>
+                <li>Check if the other tab receives real-time updates</li>
+            </ol>
+        `;
+        document.body.appendChild(instructions);
+    </script>
+</body>
+</html>

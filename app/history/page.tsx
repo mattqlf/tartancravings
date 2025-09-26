@@ -23,9 +23,9 @@ export default async function HistoryPage() {
             Back to Dashboard
           </Button>
         </Link>
-        <h1 className="text-3xl font-bold mb-2">Payment History</h1>
+        <h1 className="text-3xl font-bold mb-2">Delivery History</h1>
         <p className="text-muted-foreground">
-          View all your payment requests and transactions
+          View all your delivery requests and activities
         </p>
       </div>
 

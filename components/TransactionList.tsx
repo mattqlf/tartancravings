@@ -5,78 +5,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
-import { DollarSign, Clock, User, TrendingUp, ArrowUpRight, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Package, Clock, User, TrendingUp, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
-interface PaymentRequest {
+interface DeliveryRequest {
   id: string;
-  amount: number;
-  description: string | null;
+  description: string;
   status: string;
   created_at: string;
-  paid_at: string | null;
-  paid_by_email: string | null;
-  payout_status: string | null;
-  payout_amount: number | null;
-  platform_fee: number | null;
+  accepted_at?: string;
+  completed_at?: string;
+  buyer?: {
+    display_name: string;
+    email: string;
+  };
+  deliverer?: {
+    display_name: string;
+    email: string;
+  };
 }
 
 export function TransactionList() {
-  const [transactions, setTransactions] = useState<PaymentRequest[]>([]);
+  const [deliveries, setDeliveries] = useState<DeliveryRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<'buyer' | 'deliverer' | 'both'>('both');
 
   useEffect(() => {
-    loadTransactions();
+    loadDeliveries();
   }, []);
 
-  // Set up real-time subscription for payment updates
-  useEffect(() => {
-    const supabase = createClient();
-
-    // Subscribe to changes in payment_requests table for this user
-    const subscription = supabase
-      .channel('payment_updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
-          schema: 'public',
-          table: 'payment_requests',
-        },
-        async (payload) => {
-          console.log('Real-time update received:', payload);
-
-          // Get current user to filter updates
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return;
-
-          if (payload.eventType === 'UPDATE') {
-            // Check if this update is for the current user's transactions
-            if (payload.new && (payload.new as any).recipient_id === user.id) {
-              setTransactions(prev =>
-                prev.map(t =>
-                  t.id === payload.new.id
-                    ? { ...t, ...(payload.new as PaymentRequest) }
-                    : t
-                )
-              );
-            }
-          } else if (payload.eventType === 'INSERT') {
-            // New transaction created for this user
-            if (payload.new && (payload.new as any).recipient_id === user.id) {
-              setTransactions(prev => [payload.new as PaymentRequest, ...prev]);
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    // Cleanup subscription on unmount
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const loadTransactions = async () => {
+  const loadDeliveries = async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -85,41 +42,49 @@ export function TransactionList() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from('payment_requests')
-      .select('*')
-      .eq('recipient_id', user.id)
+    // Load deliveries where user is either buyer or deliverer
+    const { data: buyerDeliveries } = await supabase
+      .from('delivery_requests')
+      .select(`
+        *,
+        deliverer:driver_id (display_name, email)
+      `)
+      .eq('buyer_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(10);
 
-    if (error) {
-      console.error('Error loading transactions:', error);
-    } else {
-      setTransactions(data || []);
-    }
+    const { data: delivererDeliveries } = await supabase
+      .from('delivery_requests')
+      .select(`
+        *,
+        buyer:buyer_id (display_name, email)
+      `)
+      .eq('driver_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(10);
 
+    const allDeliveries = [
+      ...(buyerDeliveries || []),
+      ...(delivererDeliveries || [])
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    // Remove duplicates
+    const uniqueDeliveries = allDeliveries.filter((delivery, index, arr) =>
+      arr.findIndex(d => d.id === delivery.id) === index
+    );
+
+    setDeliveries(uniqueDeliveries);
     setLoading(false);
   };
 
-  const getStatusInfo = (status: string, payoutStatus?: string | null) => {
-    if (status === 'paid') {
-      switch (payoutStatus) {
-        case 'completed':
-          return { color: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: CheckCircle, text: 'Paid Out' };
-        case 'processing':
-          return { color: 'bg-blue-100 text-blue-800 border-blue-200', icon: TrendingUp, text: 'Processing' };
-        case 'failed':
-          return { color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle, text: 'Payout Failed' };
-        default:
-          return { color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle, text: 'Paid' };
-      }
-    }
-
+  const getStatusInfo = (status: string) => {
     switch (status) {
       case 'pending':
         return { color: 'bg-amber-100 text-amber-800 border-amber-200', icon: Clock, text: 'Pending' };
-      case 'expired':
-        return { color: 'bg-gray-100 text-gray-800 border-gray-200', icon: XCircle, text: 'Expired' };
+      case 'accepted':
+        return { color: 'bg-blue-100 text-blue-800 border-blue-200', icon: Package, text: 'In Progress' };
+      case 'completed':
+        return { color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle, text: 'Completed' };
       case 'cancelled':
         return { color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle, text: 'Cancelled' };
       default:
@@ -127,16 +92,12 @@ export function TransactionList() {
     }
   };
 
-  const getTotalEarnings = () => {
-    return transactions
-      .filter(t => t.status === 'paid' && t.payout_status === 'completed')
-      .reduce((sum, t) => sum + (t.payout_amount || 0), 0);
+  const getCompletedCount = () => {
+    return deliveries.filter(d => d.status === 'completed').length;
   };
 
-  const getPlatformFees = () => {
-    return transactions
-      .filter(t => t.status === 'paid')
-      .reduce((sum, t) => sum + (t.platform_fee || 0), 0);
+  const getPendingCount = () => {
+    return deliveries.filter(d => d.status === 'pending').length;
   };
 
   if (loading) {
@@ -154,7 +115,7 @@ export function TransactionList() {
           ))}
         </div>
 
-        {/* Transactions List Skeleton */}
+        {/* Deliveries List Skeleton */}
         <Card>
           <CardHeader>
             <div className="h-6 bg-gray-200 rounded mb-2"></div>
@@ -172,9 +133,9 @@ export function TransactionList() {
     );
   }
 
-  const totalEarnings = getTotalEarnings();
-  const platformFees = getPlatformFees();
-  const totalVolume = transactions.reduce((sum, t) => sum + (t.status === 'paid' ? t.amount : 0), 0);
+  const completedCount = getCompletedCount();
+  const pendingCount = getPendingCount();
+  const totalCount = deliveries.length;
 
   return (
     <div className="space-y-6">
@@ -184,13 +145,13 @@ export function TransactionList() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium">Total Earnings</p>
+                <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium">Completed</p>
                 <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
-                  ${(totalEarnings / 100).toFixed(2)}
+                  {completedCount}
                 </p>
               </div>
               <div className="p-3 bg-emerald-200 dark:bg-emerald-800 rounded-full">
-                <DollarSign className="h-6 w-6 text-emerald-700 dark:text-emerald-300" />
+                <CheckCircle className="h-6 w-6 text-emerald-700 dark:text-emerald-300" />
               </div>
             </div>
           </CardContent>
@@ -200,99 +161,95 @@ export function TransactionList() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-600 dark:text-blue-400 text-sm font-medium">Total Volume</p>
+                <p className="text-blue-600 dark:text-blue-400 text-sm font-medium">Total Deliveries</p>
                 <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                  ${(totalVolume / 100).toFixed(2)}
+                  {totalCount}
                 </p>
               </div>
               <div className="p-3 bg-blue-200 dark:bg-blue-800 rounded-full">
-                <TrendingUp className="h-6 w-6 text-blue-700 dark:text-blue-300" />
+                <Package className="h-6 w-6 text-blue-700 dark:text-blue-300" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-600 dark:text-purple-400 text-sm font-medium">Platform Fees</p>
-                <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                  ${(platformFees / 100).toFixed(2)}
+                <p className="text-amber-600 dark:text-amber-400 text-sm font-medium">Pending</p>
+                <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">
+                  {pendingCount}
                 </p>
               </div>
-              <div className="p-3 bg-purple-200 dark:bg-purple-800 rounded-full">
-                <ArrowUpRight className="h-6 w-6 text-purple-700 dark:text-purple-300" />
+              <div className="p-3 bg-amber-200 dark:bg-amber-800 rounded-full">
+                <Clock className="h-6 w-6 text-amber-700 dark:text-amber-300" />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Transactions List */}
+      {/* Deliveries List */}
       <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-xl font-semibold">Recent Transactions</CardTitle>
-              <CardDescription>Your latest payment requests and payouts</CardDescription>
+              <CardTitle className="text-xl font-semibold">Recent Deliveries</CardTitle>
+              <CardDescription>Your latest delivery requests and completions</CardDescription>
             </div>
             <Badge variant="secondary" className="text-xs">
-              {transactions.length} total
+              {deliveries.length} total
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {transactions.length === 0 ? (
+          {deliveries.length === 0 ? (
             <div className="text-center py-12">
               <div className="mx-auto w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                <DollarSign className="h-8 w-8 text-gray-400" />
+                <Package className="h-8 w-8 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No transactions yet</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No deliveries yet</h3>
               <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                Create your first payment request to start receiving payments
+                Create your first delivery request or start driving to see activity here
               </p>
             </div>
           ) : (
             <div className="max-h-96 overflow-y-auto px-6 pb-6">
               <div className="space-y-3">
-                {transactions.map((transaction) => {
-                  const statusInfo = getStatusInfo(transaction.status, transaction.payout_status);
+                {deliveries.map((delivery) => {
+                  const statusInfo = getStatusInfo(delivery.status);
                   const StatusIcon = statusInfo.icon;
 
                   return (
                     <div
-                      key={transaction.id}
+                      key={delivery.id}
                       className="group relative p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:shadow-md transition-all duration-200 hover:border-blue-300 dark:hover:border-blue-600 bg-gradient-to-r from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg group-hover:scale-110 transition-transform duration-200">
-                            <DollarSign className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                           </div>
                           <div>
-                            <div className="flex items-center space-x-2 mb-1">
-                              <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                                ${(transaction.amount / 100).toFixed(2)}
-                              </span>
-                              {transaction.payout_amount && transaction.payout_status === 'completed' && (
-                                <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-                                  → ${(transaction.payout_amount / 100).toFixed(2)}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">
-                              {transaction.description || 'Payment Request'}
+                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                              {delivery.description}
                             </p>
                             <div className="flex items-center space-x-3 mt-1">
                               <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
                                 <Clock className="h-3 w-3 mr-1" />
-                                {formatDistanceToNow(new Date(transaction.created_at), { addSuffix: true })}
+                                {formatDistanceToNow(new Date(delivery.created_at), { addSuffix: true })}
                               </span>
-                              {transaction.paid_by_email && (
+                              {delivery.buyer && (
                                 <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
                                   <User className="h-3 w-3 mr-1" />
-                                  {transaction.paid_by_email}
+                                  Buyer: {delivery.buyer.display_name || delivery.buyer.email}
+                                </span>
+                              )}
+                              {delivery.deliverer && (
+                                <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                                  <User className="h-3 w-3 mr-1" />
+                                  Deliverer: {delivery.deliverer.display_name || delivery.deliverer.email}
                                 </span>
                               )}
                             </div>
@@ -304,12 +261,6 @@ export function TransactionList() {
                             <StatusIcon className="h-3 w-3" />
                             <span>{statusInfo.text}</span>
                           </Badge>
-
-                          {transaction.platform_fee && transaction.status === 'paid' && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              Fee: ${(transaction.platform_fee / 100).toFixed(2)}
-                            </span>
-                          )}
                         </div>
                       </div>
                     </div>
