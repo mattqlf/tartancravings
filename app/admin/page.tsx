@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, Eye } from 'lucide-react'
+import { Plus, Edit, Trash2, Eye, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AdminGuard } from '@/components/admin/AdminGuard'
 import { RestaurantForm } from '@/components/admin/RestaurantForm'
+import { MenuManagement } from '@/components/admin/MenuManagement'
 import { getAllRestaurantsForAdmin, deleteRestaurant } from '@/lib/api/admin'
 import type { Restaurant } from '@/types/database'
 import Link from 'next/link'
@@ -14,7 +15,9 @@ export default function AdminPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [showMenuManagement, setShowMenuManagement] = useState(false)
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | undefined>()
+  const [managingMenuForRestaurant, setManagingMenuForRestaurant] = useState<Restaurant | undefined>()
 
   const loadRestaurants = async () => {
     try {
@@ -66,6 +69,16 @@ export default function AdminPage() {
     setEditingRestaurant(undefined)
   }
 
+  const handleManageMenu = (restaurant: Restaurant) => {
+    setManagingMenuForRestaurant(restaurant)
+    setShowMenuManagement(true)
+  }
+
+  const handleMenuManagementBack = () => {
+    setShowMenuManagement(false)
+    setManagingMenuForRestaurant(undefined)
+  }
+
   if (showForm) {
     return (
       <AdminGuard>
@@ -74,6 +87,19 @@ export default function AdminPage() {
             restaurant={editingRestaurant}
             onSuccess={handleFormSuccess}
             onCancel={handleFormCancel}
+          />
+        </div>
+      </AdminGuard>
+    )
+  }
+
+  if (showMenuManagement && managingMenuForRestaurant) {
+    return (
+      <AdminGuard>
+        <div className="p-6">
+          <MenuManagement
+            restaurant={managingMenuForRestaurant}
+            onBack={handleMenuManagementBack}
           />
         </div>
       </AdminGuard>
@@ -250,6 +276,14 @@ export default function AdminPage() {
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleManageMenu(restaurant)}
+                              title="Manage Menu"
+                            >
+                              <Menu className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
