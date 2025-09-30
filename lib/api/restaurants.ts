@@ -6,7 +6,7 @@ const supabase = createClient()
 export async function getRestaurants(
   filters: RestaurantFilters = {},
   page: number = 1,
-  limit?: number
+  limit: number = 1000
 ): Promise<PaginatedResponse<Restaurant>> {
   let query = supabase
     .from('restaurants')
@@ -17,11 +17,11 @@ export async function getRestaurants(
     .eq('is_active', true)
 
   // Apply filters
-  if (filters.cuisine_type) {
-    query = query.eq('cuisine_type', filters.cuisine_type)
+  if (filters.cuisine_types && filters.cuisine_types.length > 0) {
+    query = query.in('cuisine_type', filters.cuisine_types)
   }
 
-  if (filters.min_rating) {
+  if (filters.min_rating !== undefined) {
     query = query.gte('rating', filters.min_rating)
   }
 
@@ -29,8 +29,8 @@ export async function getRestaurants(
     query = query.eq('accepts_dining_dollars', filters.accepts_dining_dollars)
   }
 
-  if (filters.zone) {
-    query = query.eq('building.zone', filters.zone)
+  if (filters.zones && filters.zones.length > 0) {
+    query = query.in('building.zone', filters.zones)
   }
 
   if (filters.search) {
@@ -38,14 +38,13 @@ export async function getRestaurants(
   }
 
   // Add pagination
-  if (limit) {
-    const from = (page - 1) * limit
-    const to = from + limit - 1
-    query = query.range(from, to)
-  }
+  const resolvedLimit = Math.max(limit, 1)
+  const from = (page - 1) * resolvedLimit
+  const to = from + resolvedLimit - 1
 
   const { data, error, count } = await query
     .order('rating', { ascending: false })
+    .range(from, to)
 
   if (error) {
     console.error('Restaurant fetch error:', error)
@@ -54,21 +53,20 @@ export async function getRestaurants(
       data: [],
       count: 0,
       page,
-      limit: limit ?? 0,
+      limit: resolvedLimit,
       total_pages: 0
     }
   }
 
   const results = data || []
-  const resultCount = count ?? results.length
-  const effectiveLimit = limit ?? results.length || 0
+  const resultCount = typeof count === 'number' ? count : results.length
 
   return {
     data: results,
     count: resultCount,
-    page: limit ? page : 1,
-    limit: effectiveLimit,
-    total_pages: limit ? Math.ceil(resultCount / limit) : 1
+    page,
+    limit: resolvedLimit,
+    total_pages: Math.ceil(resultCount / resolvedLimit)
   }
 }
 

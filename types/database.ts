@@ -228,11 +228,11 @@ export interface ReviewInput {
 
 // Search and filter types
 export interface RestaurantFilters {
-  cuisine_type?: string
+  cuisine_types?: string[]
   min_rating?: number
   accepts_dining_dollars?: boolean
   is_open?: boolean
-  zone?: string
+  zones?: string[]
   search?: string
 }
 

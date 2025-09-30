@@ -75,11 +75,34 @@ export default function RestaurantsPage() {
     return () => clearTimeout(debounceTimer)
   }, [filters, searchQuery])
 
-  const handleFilterChange = (key: keyof RestaurantFilters, value: any) => {
-    setFilters(prev => ({
-      ...prev,
-      [key]: value
-    }))
+  const setFilterValue = <K extends keyof RestaurantFilters>(key: K, value: RestaurantFilters[K] | undefined) => {
+    setFilters(prev => {
+      const next = { ...prev } as RestaurantFilters
+      if (value === undefined || (Array.isArray(value) && value.length === 0)) {
+        delete next[key]
+      } else {
+        next[key] = value
+      }
+      return next
+    })
+  }
+
+  const toggleListFilter = (key: 'cuisine_types' | 'zones', value: string, checked: boolean | 'indeterminate') => {
+    const isChecked = checked === true
+    setFilters(prev => {
+      const currentValues = (prev[key] ?? []) as string[]
+      const updatedValues = isChecked
+        ? Array.from(new Set([...currentValues, value]))
+        : currentValues.filter(item => item !== value)
+
+      const next = { ...prev } as RestaurantFilters
+      if (updatedValues.length > 0) {
+        next[key] = updatedValues
+      } else {
+        delete next[key]
+      }
+      return next
+    })
   }
 
   const clearFilters = () => {
@@ -97,7 +120,13 @@ export default function RestaurantsPage() {
     setFavoriteRestaurants(newFavorites)
   }
 
-  const hasActiveFilters = Object.values(filters).some(v => v !== undefined) || searchQuery
+  const hasActiveFilters =
+    Boolean(searchQuery) ||
+    (filters.cuisine_types?.length ?? 0) > 0 ||
+    (filters.zones?.length ?? 0) > 0 ||
+    filters.accepts_dining_dollars !== undefined ||
+    filters.min_rating !== undefined ||
+    filters.is_open !== undefined
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -149,9 +178,9 @@ export default function RestaurantsPage() {
                       <div key={cuisine} className="flex items-center space-x-2">
                         <Checkbox
                           id={`cuisine-${cuisine}`}
-                          checked={filters.cuisine_type === cuisine}
+                          checked={filters.cuisine_types?.includes(cuisine) ?? false}
                           onCheckedChange={(checked) =>
-                            handleFilterChange('cuisine_type', checked ? cuisine : undefined)
+                            toggleListFilter('cuisine_types', cuisine, checked)
                           }
                         />
                         <Label htmlFor={`cuisine-${cuisine}`} className="text-sm">
@@ -170,9 +199,9 @@ export default function RestaurantsPage() {
                       <div key={zone} className="flex items-center space-x-2">
                         <Checkbox
                           id={`zone-${zone}`}
-                          checked={filters.zone === zone}
+                          checked={filters.zones?.includes(zone) ?? false}
                           onCheckedChange={(checked) =>
-                            handleFilterChange('zone', checked ? zone : undefined)
+                            toggleListFilter('zones', zone, checked)
                           }
                         />
                         <Label htmlFor={`zone-${zone}`} className="text-sm">
@@ -190,7 +219,7 @@ export default function RestaurantsPage() {
                       id="dining-dollars"
                       checked={filters.accepts_dining_dollars === true}
                       onCheckedChange={(checked) =>
-                        handleFilterChange('accepts_dining_dollars', checked ? true : undefined)
+                        setFilterValue('accepts_dining_dollars', checked === true ? true : undefined)
                       }
                     />
                     <Label htmlFor="dining-dollars" className="text-sm">
@@ -203,7 +232,7 @@ export default function RestaurantsPage() {
                       id="high-rated"
                       checked={filters.min_rating === 4}
                       onCheckedChange={(checked) =>
-                        handleFilterChange('min_rating', checked ? 4 : undefined)
+                        setFilterValue('min_rating', checked === true ? 4 : undefined)
                       }
                     />
                     <Label htmlFor="high-rated" className="text-sm">
