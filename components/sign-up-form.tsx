@@ -40,15 +40,24 @@ export function SignUpForm({
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/protected`,
-        },
       });
-      if (error) throw error;
-      router.push("/auth/sign-up-success");
+
+      if (error) {
+        if (error.message.includes('User already registered')) {
+          setError('An account already exists with this email address');
+        } else {
+          setError(error.message);
+        }
+        return;
+      }
+
+      // If user exists but hasn't confirmed email, Supabase returns the user without error
+      if (data.user && !data.session) {
+        router.push("/auth/sign-up-success");
+      }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
@@ -58,12 +67,12 @@ export function SignUpForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Sign up</CardTitle>
-          <CardDescription>Create a new account</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold">Create account</h1>
+        <p className="text-muted-foreground mt-2">Join our delivery platform</p>
+      </div>
+      <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+        <CardContent className="p-8">
           <form onSubmit={handleSignUp}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
@@ -102,19 +111,19 @@ export function SignUpForm({
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating an account..." : "Sign up"}
+              <Button type="submit" className="w-full h-11" disabled={isLoading}>
+                {isLoading ? "Creating account..." : "Create account"}
               </Button>
-            </div>
-            <div className="mt-4 text-center text-sm">
-              Already have an account?{" "}
-              <Link href="/auth/login" className="underline underline-offset-4">
-                Login
-              </Link>
             </div>
           </form>
         </CardContent>
       </Card>
+      <div className="text-center text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <Link href="/auth/login" className="font-medium text-primary hover:underline">
+          Sign in
+        </Link>
+      </div>
     </div>
   );
 }

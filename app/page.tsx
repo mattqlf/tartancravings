@@ -1,90 +1,153 @@
+import { Button } from "@/components/ui/button";
 import { AuthButton } from "@/components/auth-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { hasEnvVars } from "@/lib/utils";
 import Link from "next/link";
-import { EnvVarWarning } from "@/components/env-var-warning";
+import { Truck, ArrowRight, Package, Users, CheckCircle } from "lucide-react";
 
-export default function Home() {
+export default function LandingPage() {
   return (
-    <main className="min-h-screen flex flex-col items-center">
-      <div className="flex-1 w-full flex flex-col gap-20 items-center">
-        <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
-          <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
-            <div className="flex gap-5 items-center font-semibold">
-              <Link href={"/"} className="text-2xl font-bold text-cmu-red hover:text-cmu-darkred transition-colors">
-                🏴󠁧󠁢󠁳󠁣󠁴󠁿 Tartan Cravings
-              </Link>
+    <div className="min-h-screen bg-white dark:bg-gray-900">
+      {/* Navigation */}
+      <nav className="border-b border-gray-200 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-2">
+              <Truck className="h-8 w-8 text-blue-600" />
+              <span className="font-bold text-xl text-gray-900 dark:text-white">TartanCravings</span>
             </div>
-            {!hasEnvVars ? <EnvVarWarning /> : <AuthButton />}
+            <div className="flex items-center space-x-4">
+              <ThemeSwitcher />
+              <AuthButton />
+            </div>
           </div>
-        </nav>
+        </div>
+      </nav>
 
-        <div className="flex-1 flex flex-col gap-20 max-w-5xl p-5">
-          <div className="flex flex-col gap-16 items-center">
-            <div className="text-center">
-              <h1 className="text-4xl lg:text-6xl font-bold text-cmu-red mb-4">
-                🏴󠁧󠁢󠁳󠁣󠁴󠁿 Tartan Cravings
-              </h1>
-              <p className="text-xl lg:text-2xl text-cmu-gray mb-8">
-                Food delivery for Carnegie Mellon University
-              </p>
-              <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-                Order from your favorite campus restaurants with distance-based pricing.
-                Available exclusively for CMU students and staff with <span className="text-cmu-gold font-semibold">@andrew.cmu.edu</span> accounts.
-              </p>
-            </div>
+      {/* Hero Section */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="py-20 text-center">
+          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-6">
+            Connect with
+            <span className="text-blue-600"> delivery drivers</span>
+          </h1>
+          <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
+            Request deliveries instantly. Drivers accept and complete your orders.
+            Pure matchmaking platform with no payment processing.
+          </p>
 
-            {!hasEnvVars ? (
-              <div className="text-center">
-                <h2 className="text-2xl font-semibold mb-4">Setup Required</h2>
-                <p className="text-gray-600 mb-4">
-                  Configure your Supabase environment variables to enable authentication.
-                </p>
-                <div className="text-left bg-gray-100 p-4 rounded-lg text-sm">
-                  <p className="font-medium mb-2">Next steps:</p>
-                  <ol className="list-decimal list-inside space-y-1">
-                    <li>Set up Supabase project and get credentials</li>
-                    <li>Add credentials to .env.local file</li>
-                    <li>Configure Google OAuth</li>
-                    <li>Run database migrations</li>
-                  </ol>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center">
-                <h2 className="text-2xl font-semibold mb-4 text-cmu-red">Ready to Order?</h2>
-                <p className="text-gray-600 mb-6">
-                  Sign in with your Carnegie Mellon account to start ordering from campus restaurants.
-                </p>
-                <div className="bg-gradient-to-r from-cmu-red to-cmu-gold p-4 rounded-lg text-white mb-6">
-                  <p className="font-semibold">🎓 CMU Students & Staff Only</p>
-                  <p className="text-sm opacity-90">Authenticate with your @andrew.cmu.edu Google account</p>
-                </div>
-                <div className="space-y-4">
-                  <Link
-                    href="/auth/signin"
-                    className="inline-block bg-white text-cmu-red font-semibold py-3 px-8 rounded-lg border-2 border-cmu-red hover:bg-cmu-red hover:text-white transition-colors"
-                  >
-                    Get Started →
-                  </Link>
-                  <div className="text-sm text-gray-500">
-                    <Link href="/test-db" className="underline hover:text-cmu-red">
-                      Test Database Connection
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            )}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/auth/sign-up">
+              <Button size="lg" className="w-full sm:w-auto">
+                Get Started
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Link href="/auth/login">
+              <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                Sign In
+              </Button>
+            </Link>
           </div>
         </div>
 
-        <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
-          <p className="text-gray-500">
-            Made with ❤️ for the CMU community
-          </p>
-          <ThemeSwitcher />
-        </footer>
-      </div>
-    </main>
+        {/* Simple Steps */}
+        <div className="py-20 border-t border-gray-200 dark:border-gray-800">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+              How it works
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Three simple steps to get your delivery
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-12">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Package className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Request delivery</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Describe what you need delivered
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Get matched</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Available drivers see and accept your request
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Confirm delivery</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Both parties confirm completion together
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Features */}
+        <div className="py-20 border-t border-gray-200 dark:border-gray-800">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+              Why choose TartanCravings?
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-12">
+            <div className="text-center">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">No payment processing</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Handle payments directly with your driver. We just connect you.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Real-time updates</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Track your delivery status with live notifications.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Dual confirmation</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Both parties must confirm delivery completion for security.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Simple interface</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Easy to use for both requesters and drivers.
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-200 dark:border-gray-800 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center space-x-2 mb-4 md:mb-0">
+              <Truck className="h-5 w-5 text-blue-600" />
+              <span className="font-medium text-gray-900 dark:text-white">TartanCravings</span>
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Delivery Matchmaking Platform • Built with Next.js & Supabase
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }
