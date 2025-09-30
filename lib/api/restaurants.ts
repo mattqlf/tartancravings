@@ -6,14 +6,14 @@ const supabase = createClient()
 export async function getRestaurants(
   filters: RestaurantFilters = {},
   page: number = 1,
-  limit: number = 10
+  limit?: number
 ): Promise<PaginatedResponse<Restaurant>> {
   let query = supabase
     .from('restaurants')
     .select(`
       *,
       building:cmu_buildings(*)
-    `)
+    `, { count: 'exact' })
     .eq('is_active', true)
 
   // Apply filters
@@ -38,11 +38,13 @@ export async function getRestaurants(
   }
 
   // Add pagination
-  const from = (page - 1) * limit
-  const to = from + limit - 1
+  if (limit) {
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+    query = query.range(from, to)
+  }
 
   const { data, error, count } = await query
-    .range(from, to)
     .order('rating', { ascending: false })
 
   if (error) {
@@ -52,17 +54,21 @@ export async function getRestaurants(
       data: [],
       count: 0,
       page,
-      limit,
+      limit: limit ?? 0,
       total_pages: 0
     }
   }
 
+  const results = data || []
+  const resultCount = count ?? results.length
+  const effectiveLimit = limit ?? results.length || 0
+
   return {
-    data: data || [],
-    count: count || 0,
-    page,
-    limit,
-    total_pages: Math.ceil((count || 0) / limit)
+    data: results,
+    count: resultCount,
+    page: limit ? page : 1,
+    limit: effectiveLimit,
+    total_pages: limit ? Math.ceil(resultCount / limit) : 1
   }
 }
 
