@@ -15,7 +15,7 @@ async function checkAdminAccess() {
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; categoryId: string } }
+  context: { params: Promise<{ id: string; categoryId: string }> }
 ) {
   try {
     const isAdmin = await checkAdminAccess()
@@ -26,7 +26,14 @@ export async function PUT(
       )
     }
 
-    const categoryId = params.categoryId
+    const params = await context.params
+    const categoryId = params?.categoryId
+    if (!categoryId) {
+      return NextResponse.json(
+        { error: 'Category ID is required.' },
+        { status: 400 }
+      )
+    }
     const body = await request.json()
     const supabase = await createClient()
 
@@ -62,7 +69,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; categoryId: string } }
+  context: { params: Promise<{ id: string; categoryId: string }> }
 ) {
   try {
     const isAdmin = await checkAdminAccess()
@@ -73,7 +80,14 @@ export async function DELETE(
       )
     }
 
-    const categoryId = params.categoryId
+    const params = await context.params
+    const categoryId = params?.categoryId
+    if (!categoryId) {
+      return NextResponse.json(
+        { error: 'Category ID is required.' },
+        { status: 400 }
+      )
+    }
     const supabase = await createClient()
 
     const { error } = await supabase

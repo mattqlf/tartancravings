@@ -16,7 +16,7 @@ async function checkAdminAccess() {
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check admin access
@@ -28,7 +28,14 @@ export async function PUT(
       )
     }
 
-    const id = params.id
+    const params = await context.params
+    const id = params?.id
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Restaurant ID is required.' },
+        { status: 400 }
+      )
+    }
     const body: Partial<RestaurantFormData> = await request.json()
     const supabase = await createClient()
 
@@ -63,7 +70,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check admin access
@@ -75,7 +82,14 @@ export async function DELETE(
       )
     }
 
-    const id = params.id
+    const params = await context.params
+    const id = params?.id
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Restaurant ID is required.' },
+        { status: 400 }
+      )
+    }
     const supabase = await createClient()
 
     // Delete restaurant

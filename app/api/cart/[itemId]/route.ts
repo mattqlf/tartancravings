@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { itemId: string } }
+  context: { params: Promise<{ itemId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -16,7 +16,14 @@ export async function PUT(
       )
     }
 
-    const itemId = params.itemId
+    const params = await context.params
+    const itemId = params?.itemId
+    if (!itemId) {
+      return NextResponse.json(
+        { error: 'Cart item ID is required.' },
+        { status: 400 }
+      )
+    }
     const body = await request.json()
 
     const { data: cartItem, error } = await supabase
@@ -54,7 +61,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { itemId: string } }
+  context: { params: Promise<{ itemId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -67,7 +74,14 @@ export async function DELETE(
       )
     }
 
-    const itemId = params.itemId
+    const params = await context.params
+    const itemId = params?.itemId
+    if (!itemId) {
+      return NextResponse.json(
+        { error: 'Cart item ID is required.' },
+        { status: 400 }
+      )
+    }
 
     const { error } = await supabase
       .from('cart_items')

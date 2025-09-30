@@ -15,7 +15,7 @@ async function checkAdminAccess() {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const isAdmin = await checkAdminAccess()
@@ -26,7 +26,14 @@ export async function GET(
       )
     }
 
-    const restaurantId = params.id
+    const params = await context.params
+    const restaurantId = params?.id
+    if (!restaurantId) {
+      return NextResponse.json(
+        { error: 'Restaurant ID is required.' },
+        { status: 400 }
+      )
+    }
     const supabase = await createClient()
 
     const { data: categories, error } = await supabase
@@ -55,7 +62,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const isAdmin = await checkAdminAccess()
@@ -66,7 +73,14 @@ export async function POST(
       )
     }
 
-    const restaurantId = params.id
+    const params = await context.params
+    const restaurantId = params?.id
+    if (!restaurantId) {
+      return NextResponse.json(
+        { error: 'Restaurant ID is required.' },
+        { status: 400 }
+      )
+    }
     const body = await request.json()
     const supabase = await createClient()
 

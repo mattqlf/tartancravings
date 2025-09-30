@@ -15,7 +15,7 @@ async function checkAdminAccess() {
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  context: { params: Promise<{ orderId: string }> }
 ) {
   try {
     const isAdmin = await checkAdminAccess()
@@ -26,11 +26,18 @@ export async function PUT(
       )
     }
 
-    const orderId = params.orderId
+    const params = await context.params
+    const orderId = params?.orderId
+    if (!orderId) {
+      return NextResponse.json(
+        { error: 'Order ID is required.' },
+        { status: 400 }
+      )
+    }
     const body = await request.json()
     const supabase = await createClient()
 
-    const updateData: any = { status: body.status }
+    const updateData: Record<string, unknown> = { status: body.status }
 
     // Set timestamps based on status
     if (body.status === 'confirmed' && !body.confirmed_at) {

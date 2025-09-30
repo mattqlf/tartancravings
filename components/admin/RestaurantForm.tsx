@@ -78,16 +78,27 @@ export function RestaurantForm({ restaurant, onSuccess, onCancel }: RestaurantFo
   }
 
   const updateOpeningHours = (day: string, field: 'open' | 'close', value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      opening_hours: {
-        ...prev.opening_hours,
-        [day]: {
-          ...prev.opening_hours?.[day],
-          [field]: value
+    setFormData(prev => {
+      const openingHours: Record<string, { open: string; close: string }> = prev.opening_hours
+        ? { ...prev.opening_hours }
+        : { ...DEFAULT_OPENING_HOURS }
+
+      const currentDayHours: { open: string; close: string } = openingHours[day] ?? {
+        open: '',
+        close: ''
+      }
+
+      return {
+        ...prev,
+        opening_hours: {
+          ...openingHours,
+          [day]: {
+            ...currentDayHours,
+            [field]: value
+          }
         }
       }
-    }))
+    })
   }
 
   const handleBuildingChange = (buildingId: string) => {

@@ -121,7 +121,7 @@ export async function isRestaurantOpen(restaurant: Restaurant): Promise<boolean>
   }
 
   const now = new Date()
-  const currentDay = now.toLocaleLowerCase().slice(0, 3) + now.toLocaleLowerCase().slice(3)
+  const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
   const currentTime = now.toTimeString().slice(0, 5) // HH:MM format
 
   const todayHours = restaurant.opening_hours[currentDay]
@@ -193,5 +193,17 @@ export async function getUserFavoriteRestaurants(): Promise<Restaurant[]> {
     throw new Error(`Failed to fetch favorite restaurants: ${error.message}`)
   }
 
-  return data?.map(fav => fav.restaurant).filter(Boolean) || []
+  const rows = Array.isArray(data) ? data : []
+
+  const isRestaurantRecord = (value: unknown): value is Restaurant => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return false
+    }
+    const candidate = value as Partial<Restaurant>
+    return typeof candidate.id === 'string' && typeof candidate.name === 'string'
+  }
+
+  return rows
+    .map(row => (row as { restaurant?: unknown }).restaurant)
+    .filter(isRestaurantRecord)
 }

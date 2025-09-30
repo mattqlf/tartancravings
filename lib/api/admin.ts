@@ -121,7 +121,7 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
 }
 
 // Default opening hours template
-export const DEFAULT_OPENING_HOURS = {
+export const DEFAULT_OPENING_HOURS: Record<string, { open: string; close: string }> = {
   monday: { open: '09:00', close: '21:00' },
   tuesday: { open: '09:00', close: '21:00' },
   wednesday: { open: '09:00', close: '21:00' },

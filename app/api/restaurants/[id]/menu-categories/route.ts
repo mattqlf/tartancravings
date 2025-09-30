@@ -3,10 +3,17 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const restaurantId = params.id
+    const params = await context.params
+    const restaurantId = params?.id
+    if (!restaurantId) {
+      return NextResponse.json(
+        { error: 'Restaurant ID is required.' },
+        { status: 400 }
+      )
+    }
     const supabase = await createClient()
 
     const { data: categories, error } = await supabase
