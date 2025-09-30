@@ -51,6 +51,13 @@ export default {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        // CMU Tartan Colors
+        cmu: {
+          red: "#C41E3A",
+          gold: "#FFB81C",
+          gray: "#71797E",
+          darkred: "#9A1B2E",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
