@@ -27,26 +27,57 @@ export default function LandingPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="py-20 text-center">
           <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-6">
-            Connect with
-            <span className="text-blue-600"> delivery drivers</span>
+            Choose how you want to use
+            <span className="text-blue-600"> TartanCravings</span>
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-            Request deliveries instantly. Drivers accept and complete your orders.
-            Pure matchmaking platform with no payment processing.
+          <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-3xl mx-auto">
+            Looking for a late-night bite or extra cash between classes? Pick the
+            path that fits you—order food from campus favorites or join the crew of
+            student deliverers helping the community stay fueled.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth/sign-up">
-              <Button size="lg" className="w-full sm:w-auto">
-                Get Started
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Link href="/auth/login">
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                Sign In
-              </Button>
-            </Link>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="border border-gray-200 dark:border-gray-800 rounded-2xl p-8 text-left bg-white/60 dark:bg-gray-900/60 shadow-sm">
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-3">
+                I want to order food
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Browse real-time availability, place delivery requests, and match
+                with nearby student drivers.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button asChild size="lg">
+                  <Link href="/restaurants">
+                    Browse restaurants
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link href="/auth/login">Sign in</Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="border border-gray-200 dark:border-gray-800 rounded-2xl p-8 text-left bg-white/60 dark:bg-gray-900/60 shadow-sm">
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-3">
+                I want to become a deliverer
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Complete a quick onboarding, choose the requests you want to take,
+                and coordinate hand-offs right on campus.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button asChild size="lg">
+                  <Link href="/onboarding">
+                    Start driver onboarding
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link href="/auth/sign-up">Create account</Link>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
